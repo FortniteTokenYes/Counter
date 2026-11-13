@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Cofres de Fortnite</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Barlow:wght@500;600&display=swap">
+<style>
+/* Layout: a header, one panel for the match in progress (big total, finish button, one wide primary counter plus a 2x2 / 4-up grid of container types), then a history strip with a stacked bar chart of recent matches. */
+:root {
+  --bg: #0d1322;
+  --surface: #161f38;
+  --line: #2a3860;
+  --fg: #edf1ff;
+  --muted: #93a0c8;
+  --accent: #ffd23c;
+  --accent-edge: #ffe27a;
+  --on-accent: #14110a;
+  --c-cofre: #ffd23c;
+  --c-raro: #c26bff;
+  --c-municion: #6fd13a;
+  --c-suministro: #3fb6ff;
+  --c-llama: #ff7ab8;
+  --ok: #6fd13a;
+  --warn: #ffb02e;
+  --danger: #ff8a8a;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
+  --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f1f3fa;
+    --surface: #ffffff;
+    --line: #cfd6ea;
+    --fg: #141a30;
+    --muted: #586184;
+    --accent-edge: #d9b000;
+    --ok: #2f8a14;
+    --warn: #b36b00;
+    --danger: #c22e2e;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f1f3fa;
+  --surface: #ffffff;
+  --line: #cfd6ea;
+  --fg: #141a30;
+  --muted: #586184;
+  --accent-edge: #d9b000;
+  --ok: #2f8a14;
+  --warn: #b36b00;
+  --danger: #c22e2e;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 500 16px/1.45 var(--font-body);
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3, p, dl, dd { margin: 0; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+header { display: flex; flex-direction: column; gap: 10px; }
+h1 {
+  font: italic 800 clamp(42px, 12vw, 64px)/.92 var(--font-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.lede { color: var(--muted); max-width: 44ch; }
+
+h2 { font: italic 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; text-wrap: balance; }
+.panel { display: flex; flex-direction: column; gap: 16px; }
+.panel-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.head-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.match-total { display: flex; align-items: baseline; gap: 8px; color: var(--muted); }
+.match-total b {
+  font: italic 800 48px/1 var(--font-display);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Skewed buttons */
+.btn {
+  font: italic 800 20px/1 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 20px;
+  min-height: 52px;
+  cursor: pointer;
+  transform: skewX(-8deg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: var(--fg);
+  transition: transform .08s ease, opacity .15s ease;
+}
+.btn > span { display: inline-block; transform: skewX(8deg); }
+.btn:active:not(:disabled) { transform: skewX(-8deg) scale(.95); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn:focus-visible, .link-btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.btn-fill { background: var(--rc, var(--accent)); color: var(--on-accent); box-shadow: 0 0 0 1px var(--accent-edge); }
+.btn-ghost { box-shadow: inset 0 0 0 2px var(--line); }
+
+/* Counters */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  align-content: space-between;
+}
+.card.primary { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 16px; }
+.info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.label h3 { font: 600 13px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; }
+.gem { flex: none; width: 11px; height: 11px; background: var(--rc); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.num { font: italic 800 60px/1 var(--font-display); font-variant-numeric: tabular-nums; transform-origin: left center; }
+.primary .num { font-size: clamp(72px, 22vw, 104px); }
+.num.bump { animation: bump .22s ease-out; }
+@keyframes bump { from { transform: scale(1.14); } to { transform: scale(1); } }
+.sum { font-size: 13px; color: var(--muted); }
+.sum b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ctrl { display: flex; gap: 10px; }
+.card:not(.primary) .plus { flex: 1; }
+.minus { width: 52px; padding: 0; font-size: 28px; }
+.plus { font-size: 26px; min-height: 56px; }
+.primary .plus { padding: 0 26px; min-height: 64px; font-size: 30px; }
+.primary .minus { min-height: 64px; }
+@media (min-width: 640px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* History */
+.stats-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.stat { padding: 14px 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.stat + .stat { border-left: 1px solid var(--line); padding-left: 14px; }
+.stat dt { font: 600 12px/1.25 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.stat dd { font: italic 800 42px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.chart-wrap { display: flex; flex-direction: column; gap: 10px; }
+.chart-title { font: 600 13px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.plot { display: flex; align-items: flex-end; gap: 6px; height: 152px; border-bottom: 1px solid var(--line); }
+.col { flex: 1 1 0; max-width: 40px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.col .v { font: 600 12px/1 var(--font-body); font-variant-numeric: tabular-nums; }
+.stack { width: 100%; display: flex; flex-direction: column-reverse; border-radius: 4px 4px 0 0; overflow: hidden; }
+.seg { flex-basis: 0; background: var(--rc); box-shadow: 0 -1px 0 var(--surface); }
+.axis { display: flex; gap: 6px; }
+.tick { flex: 1 1 0; max-width: 40px; min-width: 0; text-align: center; font: 500 12px/1 var(--font-body); color: var(--muted); font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 22px 16px; text-align: center; text-wrap: balance; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+.base-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.base-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.base-row label { display: flex; align-items: center; gap: 8px; min-width: 0; font: 600 14px/1.2 var(--font-body); }
+.base-row input {
+  width: 132px; min-height: 48px; padding: 0 12px; text-align: right;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px;
+  font: italic 800 26px/1 var(--font-display); font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield; appearance: textfield;
+}
+.base-row input::-webkit-inner-spin-button, .base-row input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.base-row input:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+footer { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-s="saved"] .dot { background: var(--ok); }
+.status[data-s="saving"] .dot { background: var(--warn); }
+.status[data-s="error"] .dot, .status[data-s="offline"] .dot { background: var(--danger); }
+.foot-actions { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.link-btn { background: none; border: 0; color: var(--muted); font: 600 14px/1 var(--font-body); text-decoration: underline; text-underline-offset: 3px; padding: 14px 4px; min-height: 44px; cursor: pointer; }
+.link-btn.danger.armed { color: var(--danger); }
+
+.head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.info { -webkit-user-select: none; user-select: none; }
+.btn, .info { touch-action: manipulation; }
+.btn.armed { outline: 3px solid var(--fg); outline-offset: 3px; }
+.hint { display: none; font-size: 13px; color: var(--muted); }
+.key { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .hint { display: block; }
+  .key { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: auto; border: 1px solid var(--line); border-radius: 4px; font: 600 11px/1 var(--font-body); color: var(--muted); }
+}
+
+/* Modo juego: solo los contadores, todo más grande */
+body.quick header, body.quick #hist, body.quick #base, body.quick footer { display: none; }
+body.quick .wrap { gap: 20px; }
+body.quick .info { cursor: pointer; }
+body.quick .num { font-size: 84px; }
+body.quick .primary .num { font-size: clamp(100px, 32vw, 150px); }
+body.quick .plus, body.quick .minus { min-height: 72px; }
+body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .num.bump { animation: none; }
+  .btn { transition: none; }
+}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Cofres de Fortnite</h1>
+    <p class="lede">Suma lo que abres en cada partida. Al terminar, la partida pasa al historial y ves tu promedio.</p>
+    <p class="hint">Con teclado: la tecla 1 suma y Shift + 1 resta.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-match">
+    <div class="panel-head">
+      <div class="head-left">
+        <h2 id="h-match">Partida en curso</h2>
+        <p class="match-total"><b id="matchTotal" aria-live="polite">0</b> abiertos</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-ghost" id="quick" type="button" aria-pressed="false"><span>Modo juego</span></button>
+        <button class="btn btn-fill" id="finish" type="button" disabled><span>Terminar partida</span></button>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="panel" id="hist" aria-labelledby="h-hist">
+    <h2 id="h-hist">Historial</h2>
+    <dl class="stats-row">
+      <div class="stat"><dt>Partidas</dt><dd id="sMatches">0</dd></div>
+      <div class="stat"><dt>Promedio por partida</dt><dd id="sAvg">&ndash;</dd></div>
+      <div class="stat"><dt>Mejor partida</dt><dd id="sBest">&ndash;</dd></div>
+    </dl>
+    <div class="chart-wrap">
+      <p class="chart-title">Últimas partidas</p>
+      <div id="chart"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="base" aria-labelledby="h-base">
+    <h2 id="h-base">Lo que ya llevabas</h2>
+    <p class="lede">Si ya habías abierto cofres antes de usar esta página, escribe aquí cuántos. Se suman al total de cada contador, pero no cuentan como partida ni cambian tu promedio.</p>
+    <div class="base-list" id="baseList"></div>
+  </section>
+
+  <footer>
+    <p class="status" id="status" data-s="local" aria-live="polite"><span class="dot"></span><span id="statusText">Se guarda en este navegador</span></p>
+    <div class="foot-actions">
+      <button class="link-btn" id="undo" type="button" hidden>Deshacer última partida</button>
+      <button class="link-btn danger" id="reset" type="button">Borrar todo</button>
+    </div>
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var TYPES = [
+    { id: 'cofre', name: 'Cofres', one: 'cofre', color: 'var(--c-cofre)', primary: true }
+  ];
+  var MAX = 999;
+  var BASE_MAX = 999999;
+  var MAX_MATCHES = 300;
+  var LS_KEY = 'cofres-fortnite-v1';
+  var fmt = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
+
+  function $(id) { return document.getElementById(id); }
+  function clampN(n) { n = Math.floor(Number(n)); return isFinite(n) ? Math.min(MAX, Math.max(0, n)) : 0; }
+  function blank() { var o = {}; TYPES.forEach(function (t) { o[t.id] = 0; }); return o; }
+  function clampBase(n) { n = Math.floor(Number(n)); return isFinite(n) ? Math.min(BASE_MAX, Math.max(0, n)) : 0; }
+  function cleanBase(src) { var o = {}; TYPES.forEach(function (t) { o[t.id] = clampBase(src && src[t.id]); }); return o; }
+  function cleanCounts(src) { var o = {}; TYPES.forEach(function (t) { o[t.id] = clampN(src && src[t.id]); }); return o; }
+  function sum(c) { return TYPES.reduce(function (a, t) { return a + (c[t.id] || 0); }, 0); }
+  function normalize(raw) {
+    var s = { current: cleanCounts(raw && raw.current), matches: [], base: cleanBase(raw && raw.base) };
+    if (raw && Array.isArray(raw.matches)) {
+      raw.matches.slice(-MAX_MATCHES).forEach(function (m) {
+        var c = cleanCounts(m);
+        c.t = Number(m && m.t) || 0;
+        s.matches.push(c);
+      });
+    }
+    return s;
+  }
+  function hasData(s) { return sum(s.current) > 0 || s.matches.length > 0 || sum(s.base) > 0; }
+
+  /* ---------- state + persistence ---------- */
+  function readLocal() {
+    try { var raw = localStorage.getItem(LS_KEY); return raw ? normalize(JSON.parse(raw)) : null; } catch (e) { return null; }
+  }
+  function writeLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var state = readLocal() || normalize(null);
+  var ref = null, dirty = false, saving = false, saveTimer = null, loadTimer = null, connected = false;
+
+  var STATUS_TEXT = {
+    local: 'Se guarda en este navegador',
+    saving: 'Guardando…',
+    saved: 'Guardado en tu cuenta',
+    error: 'No se pudo guardar. Se intentará con el siguiente cambio',
+    offline: 'Sin conexión con tu cuenta. Los cambios quedan en este navegador'
+  };
+  function setStatus(s) {
+    $('status').setAttribute('data-s', s);
+    $('statusText').textContent = STATUS_TEXT[s];
+  }
+
+  function touch() {
+    writeLocal();
+    dirty = true;
+    if (!ref) { setStatus('local'); return; }
+    setStatus('saving');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 500);
+  }
+  function flush() {
+    if (!ref || saving || !dirty) return;
+    saving = true; dirty = false;
+    var body = JSON.parse(JSON.stringify(state));
+    ref.set(body).then(function () {
+      saving = false;
+      if (dirty) flush(); else setStatus('saved');
+    }, function () {
+      saving = false; dirty = true; setStatus('error');
+    });
+  }
+  function onRemote(snap) {
+    if (!snap.metadata.fromCache) { connected = true; clearTimeout(loadTimer); }
+    if (snap.exists) {
+      if (dirty || saving || snap.metadata.hasPendingWrites) {
+        if (dirty && !saving && !saveTimer) flush();
+        return;
+      }
+      var remote = normalize(snap.data());
+      if (JSON.stringify(remote) !== JSON.stringify(state)) {
+        state = remote; writeLocal(); renderAll();
+      }
+      if (connected) setStatus('saved');
+    } else if (!snap.metadata.fromCache) {
+      if (hasData(state)) { dirty = true; flush(); } else { setStatus('saved'); }
+    }
+  }
+  function connect() {
+    var c = window.claude;
+    if (!c || !c.use) return;
+    loadTimer = setTimeout(function () { if (ref && !connected) setStatus('offline'); }, 10000);
+    Promise.all([c.use('db'), c.use('user')]).then(function (r) {
+      var db = r[0], user = r[1];
+      return (user ? user.id() : Promise.resolve(null)).then(function (id) {
+        if (!db || !id) { clearTimeout(loadTimer); return; }
+        ref = db.doc('data/users/' + id + '/counters');
+        ref.onSnapshot(onRemote, function () { ref = null; clearTimeout(loadTimer); setStatus('local'); });
+      });
+    }).catch(function () { clearTimeout(loadTimer); });
+  }
+
+  /* ---------- build counters ---------- */
+  var grid = $('grid');
+  var refs = {};
+  TYPES.forEach(function (t, i) {
+    var card = document.createElement('article');
+    card.className = 'card' + (t.primary ? ' primary' : '');
+    card.style.setProperty('--rc', t.color);
+    card.innerHTML =
+      '<div class="info" data-type="' + t.id + '">' +
+        '<div class="label"><span class="gem" aria-hidden="true"></span><h3>' + t.name + '</h3><span class="key" aria-hidden="true">' + (i + 1) + '</span></div>' +
+        '<div class="num" aria-live="polite">0</div>' +
+        '<p class="sum">Total <b>0</b></p>' +
+      '</div>' +
+      '<div class="ctrl">' +
+        '<button type="button" class="btn btn-ghost minus" data-act="minus" data-type="' + t.id + '" aria-label="Restar ' + t.one + '"><span>&minus;</span></button>' +
+        '<button type="button" class="btn btn-fill plus" data-act="plus" data-type="' + t.id + '" aria-label="Sumar ' + t.one + '"><span>+1</span></button>' +
+      '</div>';
+    grid.appendChild(card);
+    refs[t.id] = {
+      num: card.querySelector('.num'),
+      total: card.querySelector('.sum b'),
+      minus: card.querySelector('.minus')
+    };
+    refs[t.id].num.addEventListener('animationend', function () { refs[t.id].num.classList.remove('bump'); });
+  });
+
+  var legend = $('legend');
+  TYPES.forEach(function (t) {
+    var s = document.createElement('span');
+    s.style.setProperty('--rc', t.color);
+    s.innerHTML = '<i class="gem" aria-hidden="true"></i>' + t.name;
+    legend.appendChild(s);
+  });
+
+  legend.hidden = TYPES.length < 2;
+
+  var baseList = $('baseList'), baseInputs = {};
+  TYPES.forEach(function (t) {
+    var row = document.createElement('div');
+    row.className = 'base-row';
+    row.style.setProperty('--rc', t.color);
+    row.innerHTML =
+      '<label for="base-' + t.id + '"><span class="gem" aria-hidden="true"></span>' + t.name + '</label>' +
+      '<input id="base-' + t.id + '" type="number" inputmode="numeric" min="0" max="' + BASE_MAX + '" step="1" value="0">';
+    baseList.appendChild(row);
+    var inp = row.querySelector('input');
+    baseInputs[t.id] = inp;
+    inp.addEventListener('focus', function () { inp.select(); });
+    inp.addEventListener('input', function () {
+      var v = clampBase(inp.value);
+      if (v === state.base[t.id]) return;
+      state.base[t.id] = v;
+      renderValues();
+      touch();
+    });
+    inp.addEventListener('change', function () { inp.value = state.base[t.id]; });
+  });
+
+  /* ---------- render ---------- */
+  function totalFor(id) {
+    return state.matches.reduce(function (a, m) { return a + m[id]; }, 0) + state.current[id] + state.base[id];
+  }
+  function renderValues() {
+    TYPES.forEach(function (t) {
+      var r = refs[t.id], v = state.current[t.id];
+      r.num.textContent = v;
+      r.total.textContent = totalFor(t.id).toLocaleString('es-MX');
+      r.minus.disabled = v === 0;
+    });
+    var cur = sum(state.current);
+    $('matchTotal').textContent = cur;
+    $('finish').disabled = cur === 0;
+  }
+  function renderHistory() {
+    var n = state.matches.length;
+    var sums = state.matches.map(sum);
+    $('sMatches').textContent = n;
+    $('sAvg').textContent = n ? fmt.format(sums.reduce(function (a, b) { return a + b; }, 0) / n) : '–';
+    $('sBest').textContent = n ? Math.max.apply(null, sums) : '–';
+    $('undo').hidden = n === 0;
+
+    var chart = $('

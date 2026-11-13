@@ -219,6 +219,9 @@ body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
 
 </head>
 <body>
+<noscript><p style="margin:0;padding:12px 16px;background:#b3261e;color:#fff;font:14px/1.4 sans-serif">Esta página necesita JavaScript para funcionar. Actívalo en la configuración del sitio de tu navegador.</p></noscript>
+<pre id="fatal" hidden style="position:sticky;top:0;z-index:99;margin:0;padding:12px 16px;background:#b3261e;color:#fff;font:12px/1.4 monospace;white-space:pre-wrap"></pre>
+<script>window.addEventListener("error",function(e){var f=document.getElementById("fatal");if(f){f.hidden=false;f.textContent="Error en la página: "+(e.message||"desconocido")+" (línea "+(e.lineno||"?")+")";}});</script>
 <main class="wrap">
   <header>
     <h1>Cofres de Fortnite</h1>
@@ -237,7 +240,7 @@ body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
         <button class="btn btn-fill" id="finish" type="button" disabled><span>Terminar partida</span></button>
       </div>
     </div>
-    <div class="grid" id="grid"></div>
+    <div class="grid" id="grid"><p class="empty" id="loading" style="grid-column: 1 / -1">Cargando contador… Si este mensaje no desaparece, tu navegador no está ejecutando el script.</p></div>
   </section>
 
   <section class="panel" id="hist" aria-labelledby="h-hist">
@@ -280,7 +283,9 @@ body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
   var BASE_MAX = 999999;
   var MAX_MATCHES = 300;
   var LS_KEY = 'cofres-fortnite-v1';
-  var fmt = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
+  var fmt;
+  try { fmt = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 }); }
+  catch (e) { fmt = { format: function (n) { return String(Math.round(n * 10) / 10); } }; }
 
   function $(id) { return document.getElementById(id); }
   function clampN(n) { n = Math.floor(Number(n)); return isFinite(n) ? Math.min(MAX, Math.max(0, n)) : 0; }
@@ -374,6 +379,8 @@ body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
 
   /* ---------- build counters ---------- */
   var grid = $('grid');
+  var loading = $('loading');
+  if (loading) loading.remove();
   var refs = {};
   TYPES.forEach(function (t, i) {
     var card = document.createElement('article');
@@ -427,30 +434,4 @@ body.quick .primary .plus, body.quick .primary .minus { min-height: 84px; }
       renderValues();
       touch();
     });
-    inp.addEventListener('change', function () { inp.value = state.base[t.id]; });
-  });
-
-  /* ---------- render ---------- */
-  function totalFor(id) {
-    return state.matches.reduce(function (a, m) { return a + m[id]; }, 0) + state.current[id] + state.base[id];
-  }
-  function renderValues() {
-    TYPES.forEach(function (t) {
-      var r = refs[t.id], v = state.current[t.id];
-      r.num.textContent = v;
-      r.total.textContent = totalFor(t.id).toLocaleString('es-MX');
-      r.minus.disabled = v === 0;
-    });
-    var cur = sum(state.current);
-    $('matchTotal').textContent = cur;
-    $('finish').disabled = cur === 0;
-  }
-  function renderHistory() {
-    var n = state.matches.length;
-    var sums = state.matches.map(sum);
-    $('sMatches').textContent = n;
-    $('sAvg').textContent = n ? fmt.format(sums.reduce(function (a, b) { return a + b; }, 0) / n) : '–';
-    $('sBest').textContent = n ? Math.max.apply(null, sums) : '–';
-    $('undo').hidden = n === 0;
-
-    var chart = $('
+    inp.addEventListener('change', function () { inp.val
